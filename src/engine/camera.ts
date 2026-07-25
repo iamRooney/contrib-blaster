@@ -1,0 +1,34 @@
+import type { Vec2 } from "./types.js";
+
+/**
+ * Converts world-space coordinates to screen-space pixels.
+ *
+ * For the Bomber pack this stays static (fixed zoom, no panning) since the
+ * whole 53x7 contribution grid fits in one frame. Future animation packs
+ * (e.g. a scrolling Factory Sim) can move/zoom this per-frame in their
+ * Scene's update().
+ */
+export class Camera {
+  x: number;
+  y: number;
+  zoom: number;
+
+  constructor(x = 0, y = 0, zoom = 1) {
+    this.x = x;
+    this.y = y;
+    this.zoom = zoom;
+  }
+
+  worldToScreen(pos: Vec2): Vec2 {
+    return {
+      x: (pos.x - this.x) * this.zoom,
+      y: (pos.y - this.y) * this.zoom,
+    };
+  }
+
+  reset(x = 0, y = 0, zoom = 1): void {
+    this.x = x;
+    this.y = y;
+    this.zoom = zoom;
+  }
+}

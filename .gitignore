@@ -1,0 +1,15 @@
+node_modules/
+*.log
+.DS_Store
+coverage/
+*.tsbuildinfo
+
+# generated animation output (only the repo's own demo output should be committed manually)
+/output/
+
+# NOTE: dist/ is intentionally NOT ignored here. This is a JS GitHub Action —
+# consuming workflows run dist/index.js directly with no build step on their
+# end, so the bundled output must be committed. Run `npm run build:action`
+# and commit the result before tagging a release. `sharp`'s native binary
+# lives in node_modules and is NOT bundled (see scripts/build-action.mjs) —
+# see README "Publishing" notes for how that gets shipped alongside dist/.

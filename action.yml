@@ -1,0 +1,38 @@
+name: "Contrib Blaster"
+description: "Turn your GitHub contribution graph into a retro pixel-art game animation"
+author: "your-username"
+branding:
+  icon: "zap"
+  color: "orange"
+
+inputs:
+  animation:
+    description: "Which animation pack to run"
+    required: false
+    default: "bomber"
+  output:
+    description: "Output format: gif, webp, or mp4"
+    required: false
+    default: "gif"
+  output-path:
+    description: "Path to write the generated animation to"
+    required: false
+    default: "./output/contrib-animation.gif"
+  fps:
+    description: "Output frame rate"
+    required: false
+    default: "24"
+  login:
+    description: "GitHub username whose contribution graph to animate. Defaults to the repo owner."
+    required: false
+  github-token:
+    description: "GitHub token used to query the contribution graph (needs read:user scope). The default workflow GITHUB_TOKEN is sufficient for a user's own public contributions."
+    required: true
+
+outputs:
+  animation-path:
+    description: "Path to the generated animation file"
+
+runs:
+  using: "node20"
+  main: "dist/index.js"

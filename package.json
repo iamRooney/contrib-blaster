@@ -1,0 +1,35 @@
+{
+  "name": "contrib-blaster",
+  "version": "0.1.0",
+  "description": "Turn your GitHub contribution graph into a retro pixel-art game animation",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "build:action": "node scripts/build-action.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src --ext .ts",
+    "dev": "tsx src/cli.ts"
+  },
+  "keywords": [
+    "github-action",
+    "pixel-art",
+    "contribution-graph",
+    "canvas",
+    "animation"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "esbuild": "^0.28.1",
+    "eslint": "^9.6.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  },
+  "dependencies": {
+    "gifenc": "^1.0.3",
+    "sharp": "^0.35.3"
+  }
+}
