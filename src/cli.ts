@@ -20,7 +20,19 @@ export interface RunOptions {
   format: OutputFormat;
 }
 
-function createEncoder(format: OutputFormat, outputPath: string, width: number, height: number, fps: number): FrameEncoder {
+// Encoder classes are imported statically here — that's fine now. The
+// sharp-avoidance fix lives inside ffmpeg-frame-encoder.ts itself (a lazy
+// createRequire() call, not a static `import`), so simply *referencing*
+// WebpFrameEncoder/Mp4FrameEncoder's class definitions at import time no
+// longer triggers loading sharp. Only actually instantiating/using one of
+// them does.
+function createEncoder(
+  format: OutputFormat,
+  outputPath: string,
+  width: number,
+  height: number,
+  fps: number,
+): FrameEncoder {
   switch (format) {
     case "gif":
       return new GifFrameEncoder(outputPath, width, height, fps);

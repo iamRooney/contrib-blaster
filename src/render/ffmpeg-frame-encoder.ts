@@ -1,9 +1,31 @@
-import sharp from "sharp";
+import type sharpType from "sharp"; // type-only: erased at compile time, does NOT affect the runtime bundle
+import { createRequire } from "node:module";
 import { spawn } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { FrameEncoder } from "../engine/timeline.js";
+
+/**
+ * `sharp` is loaded via a runtime createRequire() call, NOT a static
+ * `import sharp from "sharp"`. This matters: esbuild bundles this file's
+ * code inline into the single dist/index.js output regardless of whether
+ * the *caller* used a dynamic import() — and once inlined, any static
+ * `import` of an external package gets hoisted to the top of the bundle
+ * and executed unconditionally on startup. That would mean every run of
+ * this Action — including the default `gif` format, which has no native
+ * dependency at all — fails with "Cannot find module 'sharp'" unless
+ * node_modules/sharp is committed. A runtime require() call is opaque to
+ * that static hoisting, so sharp is only ever actually loaded the first
+ * time pushFrame() runs, i.e. only for webp/mp4 output.
+ */
+const require = createRequire(import.meta.url);
+let cachedSharp: typeof sharpType | undefined;
+function getSharp(): typeof sharpType {
+  cachedSharp ??= require("sharp");
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  return cachedSharp!;
+}
 
 /**
  * Shared by MP4 and WebP output: both go through a real `ffmpeg` binary
@@ -39,7 +61,7 @@ export abstract class FfmpegFrameEncoder implements FrameEncoder {
 
   async pushFrame(rgba: Buffer): Promise<void> {
     const framePath = join(this.tempDir, `frame-${String(this.frameIndex).padStart(6, "0")}.png`);
-    const png = await sharp(rgba, { raw: { width: this.width, height: this.height, channels: 4 } })
+    const png = await getSharp()(rgba, { raw: { width: this.width, height: this.height, channels: 4 } })
       .png()
       .toBuffer();
     writeFileSync(framePath, png);

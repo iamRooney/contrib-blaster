@@ -872,11 +872,17 @@ var GifFrameEncoder = class {
 };
 
 // src/render/ffmpeg-frame-encoder.ts
-import sharp from "sharp";
+import { createRequire as createRequire2 } from "node:module";
 import { spawn } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync as writeFileSync2 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+var require3 = createRequire2(import.meta.url);
+var cachedSharp;
+function getSharp() {
+  cachedSharp ??= require3("sharp");
+  return cachedSharp;
+}
 var FfmpegFrameEncoder = class {
   width;
   height;
@@ -893,7 +899,7 @@ var FfmpegFrameEncoder = class {
   }
   async pushFrame(rgba) {
     const framePath = join(this.tempDir, `frame-${String(this.frameIndex).padStart(6, "0")}.png`);
-    const png = await sharp(rgba, { raw: { width: this.width, height: this.height, channels: 4 } }).png().toBuffer();
+    const png = await getSharp()(rgba, { raw: { width: this.width, height: this.height, channels: 4 } }).png().toBuffer();
     writeFileSync2(framePath, png);
     this.frameIndex++;
   }
