@@ -8,6 +8,8 @@ import { GifFrameEncoder } from "./render/gif-encoder.js";
 import { WebpFrameEncoder } from "./render/webp-encoder.js";
 import { Mp4FrameEncoder } from "./render/mp4-encoder.js";
 import type { ContributionGrid } from "./github/graph.js";
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 
 const TILE_SIZE_PX = 12; // pixel-art scale; bumped up for visibility since we're still on placeholder rect rendering
 
@@ -44,6 +46,8 @@ function createEncoder(
 }
 
 export async function run(grid: ContributionGrid, options: RunOptions): Promise<void> {
+  mkdirSync(dirname(options.outputPath), { recursive: true });
+
   const scene = createScene(options.animation, grid);
   const world = new World(hashGridForSeed(grid));
   scene.init(world);

@@ -1258,6 +1258,8 @@ var Mp4FrameEncoder = class extends FfmpegFrameEncoder {
 };
 
 // src/cli.ts
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 var TILE_SIZE_PX = 12;
 function createEncoder(format, outputPath, width, height, fps) {
   switch (format) {
@@ -1270,6 +1272,7 @@ function createEncoder(format, outputPath, width, height, fps) {
   }
 }
 async function run(grid, options) {
+  mkdirSync(dirname(options.outputPath), { recursive: true });
   const scene = createScene(options.animation, grid);
   const world = new World(hashGridForSeed(grid));
   scene.init(world);
