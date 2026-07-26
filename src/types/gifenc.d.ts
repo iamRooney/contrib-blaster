@@ -1,4 +1,4 @@
-declare module "gifenc" {
+declare module "gifenc/dist/gifenc.esm.js" {
   export interface WriteFrameOptions {
     palette?: number[][];
     delay?: number;

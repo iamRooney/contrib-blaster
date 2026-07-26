@@ -1,14 +1,18 @@
-import { createRequire } from "node:module";
+import { GIFEncoder, quantize, applyPalette } from "gifenc/dist/gifenc.esm.js";
 import { writeFileSync } from "node:fs";
 import type { FrameEncoder } from "../engine/timeline.js";
 
-// gifenc's CJS bundle uses an esbuild __export() getter pattern that
-// Node's static ESM/CJS interop analysis (cjs-module-lexer) doesn't
-// reliably detect, causing `import { GIFEncoder } from "gifenc"` to fail
-// with "does not provide an export named...". createRequire sidesteps the
-// static analysis entirely and loads it as plain CJS, which always works.
-const require = createRequire(import.meta.url);
-const { GIFEncoder, quantize, applyPalette } = require("gifenc") as typeof import("gifenc");
+/**
+ * Imports gifenc's ESM build directly by path (dist/gifenc.esm.js), not the
+ * package's default entry point. The package's main CJS bundle uses an
+ * esbuild __export() getter pattern that Node's CJS/ESM interop handles
+ * inconsistently — named imports fail ("does not provide an export
+ * named..."), and both default and namespace imports resolve to unexpected
+ * values (gifenc's own `default` export happens to equal its `GIFEncoder`
+ * function, not the whole module). The ESM build has genuine static
+ * `export { ... }` syntax, so it works correctly and predictably under
+ * plain Node AND bundles correctly with esbuild — no interop guessing.
+ */
 
 /**
  * Wraps gifenc (pure JS, no native deps) into the engine's FrameEncoder
