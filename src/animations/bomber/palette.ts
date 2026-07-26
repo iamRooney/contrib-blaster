@@ -12,7 +12,7 @@ import type { RenderContext } from "../../engine/types.js";
  */
 export const GITHUB_COLORS = {
   /** Zero-contribution square background. */
-  level0: "#ebedf0",
+  level0: "#010408",
   level1: "#9be9a8",
   level2: "#40c463",
   level3: "#30a14e",
