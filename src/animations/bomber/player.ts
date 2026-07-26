@@ -8,6 +8,7 @@ import { TileMap, TileType, type Tile } from "../../engine/tilemap.js";
 import { findPath } from "../../engine/pathfinding.js";
 import { TargetQueue } from "./target-queue.js";
 import { Bomb } from "./bomb.js";
+import { drawSprite, PLAYER_SPRITE } from "./sprites.js";
 
 const TICKS_PER_TILE_STEP = 2;
 
@@ -206,9 +207,6 @@ export class Player extends Entity implements TileOccupant {
   }
 
   render(ctx: RenderContext, camera: Camera): void {
-    // Placeholder — swapped for an animated spritesheet (walk/idle/place-bomb frames) once art lands.
-    const screen = camera.worldToScreen(this.position);
-    ctx.fillStyle = "#3a86ff";
-    ctx.fillRect(screen.x, screen.y, camera.zoom, camera.zoom);
+    drawSprite(ctx, camera, this.position, PLAYER_SPRITE);
   }
 }

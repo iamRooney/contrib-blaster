@@ -352,6 +352,78 @@ var Bomb = class extends Entity {
   }
 };
 
+// src/animations/bomber/sprites.ts
+function drawSprite(ctx, camera, worldPos, sprite) {
+  const screen = camera.worldToScreen(worldPos);
+  const tileSizePx = camera.zoom;
+  const cols = sprite.rows[0]?.length ?? 0;
+  const rows = sprite.rows.length;
+  if (cols === 0 || rows === 0) return;
+  const cellSize = tileSizePx / Math.max(cols, rows);
+  const offsetX = (tileSizePx - cols * cellSize) / 2;
+  const offsetY = (tileSizePx - rows * cellSize) / 2;
+  for (let r = 0; r < rows; r++) {
+    const row = sprite.rows[r] ?? "";
+    for (let c = 0; c < cols; c++) {
+      const ch = row[c];
+      if (!ch || ch === "." || ch === " ") continue;
+      const color = sprite.palette[ch];
+      if (!color) continue;
+      ctx.fillStyle = color;
+      ctx.fillRect(
+        screen.x + offsetX + c * cellSize,
+        screen.y + offsetY + r * cellSize,
+        Math.ceil(cellSize),
+        Math.ceil(cellSize)
+      );
+    }
+  }
+}
+var BONE = "#f0ead6";
+var BONE_SHADOW = "#c8bea5";
+var OUTLINE = "#1e1e1e";
+var BANDANA = "#c0392b";
+var BOMB_BODY = "#323e44";
+var BOMB_HIGHLIGHT = "#505f64";
+var FUSE = "#785a3c";
+var FLAME_OUTER = "#ff8f00";
+var FLAME_INNER = "#ffd54f";
+var PLAYER_SPRITE = {
+  palette: {
+    B: BONE,
+    S: BONE_SHADOW,
+    K: OUTLINE,
+    R: BANDANA,
+    M: BOMB_BODY,
+    H: BOMB_HIGHLIGHT,
+    F: FUSE,
+    O: FLAME_OUTER,
+    Y: FLAME_INNER
+  },
+  rows: [
+    "....................",
+    "....................",
+    "....KRRRRRK.........",
+    "....RRRRRRRRR.......",
+    "....KBBBBBRRROOO....",
+    "....BBKBKBB..YYY....",
+    "....KBBBBBK..OYO....",
+    "....KKKKKKK...F.....",
+    ".....KBKBK..KKMKK...",
+    ".....BBKBBKKMHMMMK..",
+    "...KBKSKSKBKMHMMMK..",
+    "...BBKBKBKBMMMMMMM..",
+    "...BBKSKSK.KMMMMMK..",
+    "...BBBBKBB.KMMMMMK..",
+    ".....KB.KB..KKMKK...",
+    ".....KB.KB..........",
+    ".....BB.BB..........",
+    ".....KB.KB..........",
+    ".....BB.BB..........",
+    "...................."
+  ]
+};
+
 // src/animations/bomber/player.ts
 var TICKS_PER_TILE_STEP = 2;
 var RADIUS_BY_TILE_TYPE = {
@@ -508,11 +580,50 @@ var Player = class extends Entity {
     this.state = "WAIT_FOR_EXPLOSION";
   }
   render(ctx, camera) {
-    const screen = camera.worldToScreen(this.position);
-    ctx.fillStyle = "#3a86ff";
-    ctx.fillRect(screen.x, screen.y, camera.zoom, camera.zoom);
+    drawSprite(ctx, camera, this.position, PLAYER_SPRITE);
   }
 };
+
+// src/animations/bomber/palette.ts
+var GITHUB_COLORS = {
+  /** Zero-contribution square background. */
+  level0: "#ebedf0",
+  level1: "#9be9a8",
+  level2: "#40c463",
+  level3: "#30a14e",
+  level4: "#216e39",
+  /** Page background behind the grid itself. */
+  pageBackground: "#ffffff",
+  /** Axis label text color. */
+  labelText: "#57606a"
+};
+function colorForTileType(type) {
+  switch (type) {
+    case "floor" /* Floor */:
+      return GITHUB_COLORS.level0;
+    case "weak_crate" /* WeakCrate */:
+      return GITHUB_COLORS.level1;
+    case "strong_crate" /* StrongCrate */:
+      return GITHUB_COLORS.level2;
+    case "reinforced_crate" /* ReinforcedCrate */:
+      return GITHUB_COLORS.level3;
+    case "metal_block" /* MetalBlock */:
+      return GITHUB_COLORS.level4;
+  }
+}
+function fillContributionSquare(ctx, screenX, screenY, tileSizePx, color) {
+  const gap = Math.max(1, Math.round(tileSizePx * 0.12));
+  const size = tileSizePx - gap;
+  const corner = Math.max(1, Math.round(size * 0.22));
+  ctx.fillStyle = color;
+  ctx.fillRect(screenX + corner, screenY, size - corner * 2, size);
+  ctx.fillRect(screenX, screenY + corner, size, size - corner * 2);
+  for (let i = 0; i < corner; i++) {
+    const inset = corner - i;
+    ctx.fillRect(screenX + inset, screenY + i, size - inset * 2, 1);
+    ctx.fillRect(screenX + inset, screenY + size - 1 - i, size - inset * 2, 1);
+  }
+}
 
 // src/animations/bomber/crate.ts
 var HP_BY_TILE_TYPE = {
@@ -543,13 +654,7 @@ var Crate = class extends Entity {
   }
   render(ctx, camera) {
     const screen = camera.worldToScreen(this.position);
-    const colorByType = {
-      ["weak_crate" /* WeakCrate */]: "#c9a86a",
-      ["strong_crate" /* StrongCrate */]: "#a8763f",
-      ["reinforced_crate" /* ReinforcedCrate */]: "#6b4a26"
-    };
-    ctx.fillStyle = colorByType[this.tile.type] ?? "#888888";
-    ctx.fillRect(screen.x, screen.y, camera.zoom, camera.zoom);
+    fillContributionSquare(ctx, screen.x, screen.y, camera.zoom, colorForTileType(this.tile.type));
   }
 };
 
@@ -584,7 +689,64 @@ var TargetQueue = class {
   }
 };
 
+// src/render/font.ts
+var GLYPHS = {
+  A: [".#.", "#.#", "###", "#.#", "#.#"],
+  B: ["##.", "#.#", "##.", "#.#", "##."],
+  C: [".##", "#..", "#..", "#..", ".##"],
+  D: ["##.", "#.#", "#.#", "#.#", "##."],
+  E: ["###", "#..", "##.", "#..", "###"],
+  F: ["###", "#..", "##.", "#..", "#.."],
+  G: [".##", "#..", "#.#", "#.#", ".##"],
+  I: ["###", ".#.", ".#.", ".#.", "###"],
+  J: ["..#", "..#", "..#", "#.#", ".#."],
+  L: ["#..", "#..", "#..", "#..", "###"],
+  M: ["#.#", "###", "#.#", "#.#", "#.#"],
+  N: ["##.", "#.#", "#.#", "#.#", ".##"],
+  O: [".#.", "#.#", "#.#", "#.#", ".#."],
+  P: ["##.", "#.#", "##.", "#..", "#.."],
+  R: ["##.", "#.#", "##.", "#.#", "#.#"],
+  S: [".##", "#..", ".#.", "..#", "##."],
+  T: ["###", ".#.", ".#.", ".#.", ".#."],
+  U: ["#.#", "#.#", "#.#", "#.#", ".#."],
+  V: ["#.#", "#.#", "#.#", "#.#", ".#."],
+  W: ["#.#", "#.#", "#.#", "###", "#.#"],
+  Y: ["#.#", "#.#", ".#.", ".#.", ".#."]
+};
+var GLYPH_WIDTH = 3;
+var GLYPH_HEIGHT = 5;
+function drawText(ctx, text, x, y, color, pixelSize = 1) {
+  let cursorX = x;
+  ctx.fillStyle = color;
+  for (const char of text.toUpperCase()) {
+    const glyph = GLYPHS[char];
+    if (glyph) {
+      for (let row = 0; row < GLYPH_HEIGHT; row++) {
+        const line = glyph[row] ?? "";
+        for (let col = 0; col < GLYPH_WIDTH; col++) {
+          if (line[col] === "#") {
+            ctx.fillRect(
+              cursorX + col * pixelSize,
+              y + row * pixelSize,
+              pixelSize,
+              pixelSize
+            );
+          }
+        }
+      }
+    }
+    cursorX += (GLYPH_WIDTH + 1) * pixelSize;
+  }
+  return cursorX - x;
+}
+
 // src/animations/bomber/scene.ts
+var MONTH_NAMES = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+var DAY_LABELS = [
+  { row: 1, text: "MON" },
+  { row: 3, text: "WED" },
+  { row: 5, text: "FRI" }
+];
 var BomberScene = class {
   tileMap;
   targetQueue;
@@ -604,7 +766,10 @@ var BomberScene = class {
     world.update(dt2);
   }
   render(ctx, camera, world) {
+    this.drawPageBackground(ctx, camera);
     this.drawBackground(ctx, camera);
+    this.drawMonthLabels(ctx, camera);
+    this.drawDayLabels(ctx, camera);
     const sorted = [...world.entities].sort((a, b) => a.zIndex - b.zIndex);
     for (const entity of sorted) entity.render(ctx, camera);
   }
@@ -645,13 +810,44 @@ var BomberScene = class {
     }
     return { x: 0, y: 0 };
   }
+  /** Fills the whole canvas (including the label margin area) with GitHub's page background. */
+  drawPageBackground(ctx, camera) {
+    const totalW = this.tileMap.width * camera.zoom + camera.screenOffsetX;
+    const totalH = this.tileMap.height * camera.zoom + camera.screenOffsetY;
+    ctx.fillStyle = GITHUB_COLORS.pageBackground;
+    ctx.fillRect(0, 0, totalW, totalH);
+  }
   drawBackground(ctx, camera) {
     for (let y = 0; y < this.tileMap.height; y++) {
       for (let x = 0; x < this.tileMap.width; x++) {
         const screen = camera.worldToScreen({ x, y });
-        ctx.fillStyle = "#e8e8e8";
-        ctx.fillRect(screen.x, screen.y, camera.zoom, camera.zoom);
+        fillContributionSquare(ctx, screen.x, screen.y, camera.zoom, GITHUB_COLORS.level0);
       }
+    }
+  }
+  /** Draws a 3-letter month label above the first week-column that falls in each new month, mirroring github.com's own layout. */
+  drawMonthLabels(ctx, camera) {
+    let lastMonth = -1;
+    for (let x = 0; x < this.tileMap.width; x++) {
+      const dateStr = this.tileMap.tiles[0]?.[x]?.date;
+      if (!dateStr) continue;
+      const month = new Date(dateStr).getMonth();
+      if (Number.isNaN(month)) continue;
+      if (month !== lastMonth) {
+        lastMonth = month;
+        const screen = camera.worldToScreen({ x, y: 0 });
+        const labelScale = Math.max(1, Math.floor(camera.zoom / 10));
+        drawText(ctx, MONTH_NAMES[month] ?? "", screen.x, 2, GITHUB_COLORS.labelText, labelScale);
+      }
+    }
+  }
+  /** Draws Mon/Wed/Fri labels to the left of the grid, mirroring github.com's own layout. */
+  drawDayLabels(ctx, camera) {
+    const labelScale = Math.max(1, Math.floor(camera.zoom / 10));
+    for (const { row, text } of DAY_LABELS) {
+      if (row >= this.tileMap.height) continue;
+      const screen = camera.worldToScreen({ x: 0, y: row });
+      drawText(ctx, text, 2, screen.y + camera.zoom / 4, GITHUB_COLORS.labelText, labelScale);
     }
   }
 };
@@ -763,15 +959,20 @@ var Camera = class {
   x;
   y;
   zoom;
-  constructor(x = 0, y = 0, zoom = 1) {
+  /** Extra pixel-space offset applied after the zoom transform - e.g. margin for axis labels. Not part of the tile-coordinate world. */
+  screenOffsetX;
+  screenOffsetY;
+  constructor(x = 0, y = 0, zoom = 1, screenOffsetX = 0, screenOffsetY = 0) {
     this.x = x;
     this.y = y;
     this.zoom = zoom;
+    this.screenOffsetX = screenOffsetX;
+    this.screenOffsetY = screenOffsetY;
   }
   worldToScreen(pos) {
     return {
-      x: (pos.x - this.x) * this.zoom,
-      y: (pos.y - this.y) * this.zoom
+      x: (pos.x - this.x) * this.zoom + this.screenOffsetX,
+      y: (pos.y - this.y) * this.zoom + this.screenOffsetY
     };
   }
   reset(x = 0, y = 0, zoom = 1) {
@@ -1260,7 +1461,9 @@ var Mp4FrameEncoder = class extends FfmpegFrameEncoder {
 // src/cli.ts
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-var TILE_SIZE_PX = 12;
+var TILE_SIZE_PX = 16;
+var LEFT_MARGIN_PX = 24;
+var TOP_MARGIN_PX = 14;
 function createEncoder(format, outputPath, width, height, fps) {
   switch (format) {
     case "gif":
@@ -1276,9 +1479,9 @@ async function run(grid, options) {
   const scene = createScene(options.animation, grid);
   const world = new World(hashGridForSeed(grid));
   scene.init(world);
-  const width = grid.weeks.length * TILE_SIZE_PX;
-  const height = (grid.weeks[0]?.length ?? 7) * TILE_SIZE_PX;
-  const camera = new Camera(0, 0, TILE_SIZE_PX);
+  const width = grid.weeks.length * TILE_SIZE_PX + LEFT_MARGIN_PX;
+  const height = (grid.weeks[0]?.length ?? 7) * TILE_SIZE_PX + TOP_MARGIN_PX;
+  const camera = new Camera(0, 0, TILE_SIZE_PX, LEFT_MARGIN_PX, TOP_MARGIN_PX);
   const canvas = new PixelCanvas(width, height);
   const encoder = createEncoder(options.format, options.outputPath, width, height, options.fps);
   const timeline = new Timeline();

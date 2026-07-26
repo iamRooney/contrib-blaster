@@ -4,6 +4,7 @@ import type { Camera } from "../../engine/camera.js";
 import type { RenderContext } from "../../engine/types.js";
 import type { Destructible, TileOccupant } from "../../engine/components.js";
 import { TileType, type Tile } from "../../engine/tilemap.js";
+import { colorForTileType, fillContributionSquare } from "./palette.js";
 
 /** How many bomb hits each crate tier takes to destroy. */
 const HP_BY_TILE_TYPE: Partial<Record<TileType, number>> = {
@@ -39,16 +40,7 @@ export class Crate extends Entity implements Destructible, TileOccupant {
   }
 
   render(ctx: RenderContext, camera: Camera): void {
-    // Placeholder box render until the SpriteManager/real art lands (Step 5+).
-    // Color intensity roughly follows crate tier so this is at least legible
-    // for debugging/dev builds in the meantime.
     const screen = camera.worldToScreen(this.position);
-    const colorByType: Partial<Record<TileType, string>> = {
-      [TileType.WeakCrate]: "#c9a86a",
-      [TileType.StrongCrate]: "#a8763f",
-      [TileType.ReinforcedCrate]: "#6b4a26",
-    };
-    ctx.fillStyle = colorByType[this.tile.type] ?? "#888888";
-    ctx.fillRect(screen.x, screen.y, camera.zoom, camera.zoom);
+    fillContributionSquare(ctx, screen.x, screen.y, camera.zoom, colorForTileType(this.tile.type));
   }
 }

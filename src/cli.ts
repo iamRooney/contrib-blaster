@@ -11,7 +11,9 @@ import type { ContributionGrid } from "./github/graph.js";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
-const TILE_SIZE_PX = 12; // pixel-art scale; bumped up for visibility since we're still on placeholder rect rendering
+const TILE_SIZE_PX = 16; // bumped from 12 for sprite clarity; kept modest since this directly scales output file size
+const LEFT_MARGIN_PX = 24; // room for day-of-week labels (Mon/Wed/Fri)
+const TOP_MARGIN_PX = 14; // room for month labels (Jan, Feb, ...)
 
 export type OutputFormat = "gif" | "webp" | "mp4";
 
@@ -52,9 +54,9 @@ export async function run(grid: ContributionGrid, options: RunOptions): Promise<
   const world = new World(hashGridForSeed(grid));
   scene.init(world);
 
-  const width = grid.weeks.length * TILE_SIZE_PX;
-  const height = (grid.weeks[0]?.length ?? 7) * TILE_SIZE_PX;
-  const camera = new Camera(0, 0, TILE_SIZE_PX);
+  const width = grid.weeks.length * TILE_SIZE_PX + LEFT_MARGIN_PX;
+  const height = (grid.weeks[0]?.length ?? 7) * TILE_SIZE_PX + TOP_MARGIN_PX;
+  const camera = new Camera(0, 0, TILE_SIZE_PX, LEFT_MARGIN_PX, TOP_MARGIN_PX);
   const canvas = new PixelCanvas(width, height);
   const encoder = createEncoder(options.format, options.outputPath, width, height, options.fps);
 
