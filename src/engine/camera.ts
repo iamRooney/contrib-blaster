@@ -15,6 +15,9 @@ export class Camera {
   /** Extra pixel-space offset applied after the zoom transform - e.g. margin for axis labels. Not part of the tile-coordinate world. */
   screenOffsetX: number;
   screenOffsetY: number;
+  /** Transient shake jitter, separate from screenOffsetX/Y so callers computing total canvas size don't need to account for it. Reset/recomputed by the Scene each frame. */
+  shakeX: number;
+  shakeY: number;
 
   constructor(x = 0, y = 0, zoom = 1, screenOffsetX = 0, screenOffsetY = 0) {
     this.x = x;
@@ -22,12 +25,14 @@ export class Camera {
     this.zoom = zoom;
     this.screenOffsetX = screenOffsetX;
     this.screenOffsetY = screenOffsetY;
+    this.shakeX = 0;
+    this.shakeY = 0;
   }
 
   worldToScreen(pos: Vec2): Vec2 {
     return {
-      x: (pos.x - this.x) * this.zoom + this.screenOffsetX,
-      y: (pos.y - this.y) * this.zoom + this.screenOffsetY,
+      x: (pos.x - this.x) * this.zoom + this.screenOffsetX + this.shakeX,
+      y: (pos.y - this.y) * this.zoom + this.screenOffsetY + this.shakeY,
     };
   }
 

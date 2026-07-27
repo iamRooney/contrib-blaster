@@ -50,56 +50,54 @@ export function drawSprite(ctx: RenderContext, camera: Camera, worldPos: Vec2, s
   }
 }
 
-const BONE = "#f0ead6";
-const BONE_SHADOW = "#c8bea5";
-const OUTLINE = "#1e1e1e";
-const BANDANA = "#c0392b"; // original design choice: red bandana, not a leather aviator helmet
-const BOMB_BODY = "#323e44";
-const BOMB_HIGHLIGHT = "#505f64";
-const FUSE = "#785a3c";
-const FLAME_OUTER = "#ff8f00";
-const FLAME_INNER = "#ffd54f";
-
 /**
- * "The Blaster" — this project's original bomber-pack protagonist. A small
- * bandana-wearing skeleton carrying a round bomb with a lit fuse. 20x20,
- * generated procedurally (circles/rects via math rather than freehand
- * ASCII art) to guarantee symmetry and consistent row alignment — see
- * scripts/design/gen-player-sprite.mjs for the generator, which was used
- * to render and visually verify this exact design before shipping it.
+ * "The Blaster" — this project's original bomber-pack protagonist. A small,
+ * round, teal-green blob character with simple dot eyes, holding a bomb
+ * overhead with both arms. Generated procedurally (circles/rects via math,
+ * not freehand ASCII) to guarantee symmetry — see
+ * scripts/design/gen-player-sprite.mjs for the generator, used to render
+ * and visually verify this exact design before shipping it.
+ *
+ * Deliberately original: round silhouette, simple dot eyes (not large
+ * oval "cute" eyes), teal-green color (not pink), dark stubby feet (not
+ * red shoes) — distinct from any specific existing character design,
+ * while keeping the general "small creature holding a bomb overhead"
+ * concept, which isn't itself protectable.
  */
 export const PLAYER_SPRITE: Sprite = {
   palette: {
-    B: BONE,
-    S: BONE_SHADOW,
-    K: OUTLINE,
-    R: BANDANA,
-    M: BOMB_BODY,
-    H: BOMB_HIGHLIGHT,
-    F: FUSE,
-    O: FLAME_OUTER,
-    Y: FLAME_INNER,
+    B: "#3fb68a",
+    S: "#2e8f6c",
+    K: "#1b3a2f",
+    E: "#16211d",
+    C: "#7fd9b5",
+    T: "#276b52",
+    M: "#2f3b40",
+    H: "#57666c",
+    F: "#7a5c3e",
+    O: "#ff8f00",
+    Y: "#ffd54f",
   },
   rows: [
-    "....................",
-    "....................",
-    "....KRRRRRK.........",
-    "....RRRRRRRRR.......",
-    "....KBBBBBRRROOO....",
-    "....BBKBKBB..YYY....",
-    "....KBBBBBK..OYO....",
-    "....KKKKKKK...F.....",
-    ".....KBKBK..KKMKK...",
-    ".....BBKBBKKMHMMMK..",
-    "...KBKSKSKBKMHMMMK..",
-    "...BBKBKBKBMMMMMMM..",
-    "...BBKSKSK.KMMMMMK..",
-    "...BBBBKBB.KMMMMMK..",
-    ".....KB.KB..KKMKK...",
-    ".....KB.KB..........",
-    ".....BB.BB..........",
-    ".....KB.KB..........",
-    ".....BB.BB..........",
+    "........OYO.........",
+    ".......KKFKK........",
+    "......KMHMMMK.......",
+    "......KMHMMMK.......",
+    "......MMMMMMM.......",
+    "......KMMMMMK.......",
+    "......KMMMMMK.......",
+    "......BKKMKKB.......",
+    ".....KBBBBBBBK......",
+    "....KBBBBBBBBBK.....",
+    "....KBBKBBBKSSK.....",
+    "....KBBEBBBESSK.....",
+    "....BBCBBBBBCSB.....",
+    "....KBBBBBBBSSK.....",
+    "....KBBBBBBBSSK.....",
+    "....KBBBBBSSSSK.....",
+    ".....KBBBBSSSK......",
+    "......TTKBKTT.......",
+    "......TT...TT.......",
     "....................",
   ],
 };

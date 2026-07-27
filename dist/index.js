@@ -310,15 +310,35 @@ var Explosion = class extends Entity {
   }
   render(ctx, camera) {
     const screen = camera.worldToScreen(this.position);
-    ctx.fillStyle = "#ff6b35";
-    ctx.fillRect(
-      screen.x - camera.zoom * this.radius,
-      screen.y - camera.zoom * this.radius,
-      camera.zoom * (this.radius * 2 + 1),
-      camera.zoom * (this.radius * 2 + 1)
-    );
+    const progress = this.ticksRemaining / VISUAL_DURATION_TICKS;
+    const cx = screen.x + camera.zoom / 2;
+    const cy = screen.y + camera.zoom / 2;
+    const maxPixelRadius = camera.zoom * (this.radius + 0.6);
+    const outerR = maxPixelRadius * (0.4 + 0.6 * progress);
+    const box = Math.ceil(outerR) + 2;
+    const step = 2;
+    for (let dy = -box; dy <= box; dy += step) {
+      for (let dx = -box; dx <= box; dx += step) {
+        const d = Math.hypot(dx, dy);
+        const theta = Math.atan2(dy, dx);
+        const outerEdge = burstRadiusAt(theta, outerR * 0.75, 7, outerR * 0.2, 0);
+        const midEdge = burstRadiusAt(theta, outerR * 0.5, 7, outerR * 0.15, 0.5);
+        const innerEdge = burstRadiusAt(theta, outerR * 0.25, 5, outerR * 0.1, 1.2);
+        let color = null;
+        if (d <= innerEdge) color = "#fff8dc";
+        else if (d <= midEdge) color = "#ff8f00";
+        else if (d <= outerEdge) color = "#ffd54f";
+        if (color) {
+          ctx.fillStyle = color;
+          ctx.fillRect(cx + dx, cy + dy, step, step);
+        }
+      }
+    }
   }
 };
+function burstRadiusAt(theta, baseR, spikes, spikeAmount, phaseOffset) {
+  return baseR + Math.sin(theta * spikes + phaseOffset) * spikeAmount + Math.sin(theta * spikes * 2.3) * spikeAmount * 0.4;
+}
 
 // src/animations/bomber/bomb.ts
 var DEFAULT_FUSE_TICKS = 10;
@@ -379,47 +399,40 @@ function drawSprite(ctx, camera, worldPos, sprite) {
     }
   }
 }
-var BONE = "#f0ead6";
-var BONE_SHADOW = "#c8bea5";
-var OUTLINE = "#1e1e1e";
-var BANDANA = "#c0392b";
-var BOMB_BODY = "#323e44";
-var BOMB_HIGHLIGHT = "#505f64";
-var FUSE = "#785a3c";
-var FLAME_OUTER = "#ff8f00";
-var FLAME_INNER = "#ffd54f";
 var PLAYER_SPRITE = {
   palette: {
-    B: BONE,
-    S: BONE_SHADOW,
-    K: OUTLINE,
-    R: BANDANA,
-    M: BOMB_BODY,
-    H: BOMB_HIGHLIGHT,
-    F: FUSE,
-    O: FLAME_OUTER,
-    Y: FLAME_INNER
+    B: "#3fb68a",
+    S: "#2e8f6c",
+    K: "#1b3a2f",
+    E: "#16211d",
+    C: "#7fd9b5",
+    T: "#276b52",
+    M: "#2f3b40",
+    H: "#57666c",
+    F: "#7a5c3e",
+    O: "#ff8f00",
+    Y: "#ffd54f"
   },
   rows: [
-    "....................",
-    "....................",
-    "....KRRRRRK.........",
-    "....RRRRRRRRR.......",
-    "....KBBBBBRRROOO....",
-    "....BBKBKBB..YYY....",
-    "....KBBBBBK..OYO....",
-    "....KKKKKKK...F.....",
-    ".....KBKBK..KKMKK...",
-    ".....BBKBBKKMHMMMK..",
-    "...KBKSKSKBKMHMMMK..",
-    "...BBKBKBKBMMMMMMM..",
-    "...BBKSKSK.KMMMMMK..",
-    "...BBBBKBB.KMMMMMK..",
-    ".....KB.KB..KKMKK...",
-    ".....KB.KB..........",
-    ".....BB.BB..........",
-    ".....KB.KB..........",
-    ".....BB.BB..........",
+    "........OYO.........",
+    ".......KKFKK........",
+    "......KMHMMMK.......",
+    "......KMHMMMK.......",
+    "......MMMMMMM.......",
+    "......KMMMMMK.......",
+    "......KMMMMMK.......",
+    "......BKKMKKB.......",
+    ".....KBBBBBBBK......",
+    "....KBBBBBBBBBK.....",
+    "....KBBKBBBKSSK.....",
+    "....KBBEBBBESSK.....",
+    "....BBCBBBBBCSB.....",
+    "....KBBBBBBBSSK.....",
+    "....KBBBBBBBSSK.....",
+    "....KBBBBBSSSSK.....",
+    ".....KBBBBSSSK......",
+    "......TTKBKTT.......",
+    "......TT...TT.......",
     "...................."
   ]
 };
@@ -593,9 +606,9 @@ var GITHUB_COLORS = {
   level3: "#30a14e",
   level4: "#216e39",
   /** Page background behind the grid itself. */
-  pageBackground: "#ffffff",
-  /** Axis label text color. */
-  labelText: "#57606a"
+  pageBackground: "#000000",
+  /** Axis label text color - light, for contrast against the black page background. */
+  labelText: "#c9d1d9"
 };
 function colorForTileType(type) {
   switch (type) {
@@ -747,10 +760,18 @@ var DAY_LABELS = [
   { row: 3, text: "WED" },
   { row: 5, text: "FRI" }
 ];
+var SHAKE_DURATION_TICKS = 8;
 var BomberScene = class {
   tileMap;
   targetQueue;
   player;
+  // Screen-shake state: driven by newly-resolved Explosions each tick.
+  // Lives here (not in the engine) since "shake on explosion" is this
+  // pack's decision — Camera itself just exposes the generic shakeX/shakeY
+  // offset mechanism, reusable by any future animation pack.
+  shakeTicksRemaining = 0;
+  shakeMagnitude = 0;
+  notifiedExplosions = /* @__PURE__ */ new WeakSet();
   constructor(contributionGrid) {
     this.tileMap = TileMap.fromContributionGrid(contributionGrid);
   }
@@ -764,8 +785,11 @@ var BomberScene = class {
   }
   update(dt2, world) {
     world.update(dt2);
+    this.detectNewExplosions(world);
+    if (this.shakeTicksRemaining > 0) this.shakeTicksRemaining--;
   }
   render(ctx, camera, world) {
+    this.applyShake(camera, world);
     this.drawPageBackground(ctx, camera);
     this.drawBackground(ctx, camera);
     this.drawMonthLabels(ctx, camera);
@@ -809,6 +833,29 @@ var BomberScene = class {
       }
     }
     return { x: 0, y: 0 };
+  }
+  /** Scans for Explosions that just resolved (dealt their damage) this tick and kicks off a shake, scaled to blast radius. */
+  detectNewExplosions(world) {
+    for (const entity of world.entities) {
+      if (!(entity instanceof Explosion)) continue;
+      if (entity.resolved && !this.notifiedExplosions.has(entity)) {
+        this.notifiedExplosions.add(entity);
+        this.shakeTicksRemaining = SHAKE_DURATION_TICKS;
+        this.shakeMagnitude = 2 + entity.radius * 1.5;
+      }
+    }
+  }
+  /** Computes this frame's shake jitter (decaying over the shake's remaining duration) and applies it to the camera. */
+  applyShake(camera, world) {
+    if (this.shakeTicksRemaining <= 0) {
+      camera.shakeX = 0;
+      camera.shakeY = 0;
+      return;
+    }
+    const decay = this.shakeTicksRemaining / SHAKE_DURATION_TICKS;
+    const magnitude = this.shakeMagnitude * decay;
+    camera.shakeX = (world.rng.next() - 0.5) * 2 * magnitude;
+    camera.shakeY = (world.rng.next() - 0.5) * 2 * magnitude;
   }
   /** Fills the whole canvas (including the label margin area) with GitHub's page background. */
   drawPageBackground(ctx, camera) {
@@ -962,17 +1009,22 @@ var Camera = class {
   /** Extra pixel-space offset applied after the zoom transform - e.g. margin for axis labels. Not part of the tile-coordinate world. */
   screenOffsetX;
   screenOffsetY;
+  /** Transient shake jitter, separate from screenOffsetX/Y so callers computing total canvas size don't need to account for it. Reset/recomputed by the Scene each frame. */
+  shakeX;
+  shakeY;
   constructor(x = 0, y = 0, zoom = 1, screenOffsetX = 0, screenOffsetY = 0) {
     this.x = x;
     this.y = y;
     this.zoom = zoom;
     this.screenOffsetX = screenOffsetX;
     this.screenOffsetY = screenOffsetY;
+    this.shakeX = 0;
+    this.shakeY = 0;
   }
   worldToScreen(pos) {
     return {
-      x: (pos.x - this.x) * this.zoom + this.screenOffsetX,
-      y: (pos.y - this.y) * this.zoom + this.screenOffsetY
+      x: (pos.x - this.x) * this.zoom + this.screenOffsetX + this.shakeX,
+      y: (pos.y - this.y) * this.zoom + this.screenOffsetY + this.shakeY
     };
   }
   reset(x = 0, y = 0, zoom = 1) {
@@ -1322,6 +1374,7 @@ function Z(t) {
 
 // src/render/gif-encoder.ts
 import { writeFileSync } from "node:fs";
+var PALETTE_SAMPLE_FRAMES = 60;
 var GifFrameEncoder = class {
   encoder = ct();
   width;
@@ -1329,6 +1382,7 @@ var GifFrameEncoder = class {
   fpsDelayMs;
   outputPath;
   palette = null;
+  pendingFrames = [];
   constructor(outputPath, width, height, fps) {
     this.outputPath = outputPath;
     this.width = width;
@@ -1336,20 +1390,39 @@ var GifFrameEncoder = class {
     this.fpsDelayMs = Math.round(1e3 / fps);
   }
   pushFrame(rgba) {
-    if (!this.palette) {
-      this.palette = H(rgba, 256);
+    if (this.palette) {
+      this.writeFrame(rgba);
+      return;
     }
+    this.pendingFrames.push(Buffer.from(rgba));
+    if (this.pendingFrames.length >= PALETTE_SAMPLE_FRAMES) {
+      this.computePaletteAndFlush();
+    }
+  }
+  finalize() {
+    if (!this.palette && this.pendingFrames.length > 0) {
+      this.computePaletteAndFlush();
+    }
+    this.encoder.finish();
+    const bytes = this.encoder.bytes();
+    writeFileSync(this.outputPath, Buffer.from(bytes));
+  }
+  computePaletteAndFlush() {
+    const combined = Buffer.concat(this.pendingFrames);
+    this.palette = H(combined, 256);
+    for (const frame of this.pendingFrames) {
+      this.writeFrame(frame);
+    }
+    this.pendingFrames.length = 0;
+  }
+  writeFrame(rgba) {
+    if (!this.palette) return;
     const indexed = nt(rgba, this.palette);
     this.encoder.writeFrame(indexed, this.width, this.height, {
       palette: this.palette,
       delay: this.fpsDelayMs
       // loop: 0 -> infinite loop, set once on the first frame is sufficient for gifenc.
     });
-  }
-  finalize() {
-    this.encoder.finish();
-    const bytes = this.encoder.bytes();
-    writeFileSync(this.outputPath, Buffer.from(bytes));
   }
 };
 

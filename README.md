@@ -35,6 +35,8 @@ Then embed it in your profile README:
 ![Contribution animation](./output/contrib-animation.gif)
 ```
 
+**Important: use `gif` or `webp` for README embedding, not `mp4`.** GitHub strips `<video>` tags and video links for files committed via a normal repo path — a `.mp4` only becomes embeddable if it's manually drag-and-dropped through GitHub's web editor (which generates a special `user-images.githubusercontent.com` URL). That's not something a GitHub Action can produce automatically, so `mp4` output is only useful if you plan to host or share the file elsewhere, not for the "auto-updates my README" workflow this project is built around.
+
 ## Inputs
 
 | Input | Default | Description |

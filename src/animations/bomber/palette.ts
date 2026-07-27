@@ -12,15 +12,15 @@ import type { RenderContext } from "../../engine/types.js";
  */
 export const GITHUB_COLORS = {
   /** Zero-contribution square background. */
-  level0: "#010408",
+  level0: "#ebedf0",
   level1: "#9be9a8",
   level2: "#40c463",
   level3: "#30a14e",
   level4: "#216e39",
   /** Page background behind the grid itself. */
-  pageBackground: "#ffffff",
-  /** Axis label text color. */
-  labelText: "#57606a",
+  pageBackground: "#000000",
+  /** Axis label text color - light, for contrast against the black page background. */
+  labelText: "#c9d1d9",
 } as const;
 
 /** Maps a tile's contribution tier directly to GitHub's own square colors. */

@@ -9,6 +9,7 @@ import { Crate } from "./crate.js";
 import { TargetQueue } from "./target-queue.js";
 import { GITHUB_COLORS, fillContributionSquare } from "./palette.js";
 import { drawText } from "../../render/font.js";
+import { Explosion } from "./explosion.js";
 
 const MONTH_NAMES = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 const DAY_LABELS: Array<{ row: number; text: string }> = [
@@ -16,6 +17,8 @@ const DAY_LABELS: Array<{ row: number; text: string }> = [
   { row: 3, text: "WED" },
   { row: 5, text: "FRI" },
 ];
+
+const SHAKE_DURATION_TICKS = 8;
 
 /**
  * The Bomber animation pack's entry point. This is the ONLY file that
@@ -26,6 +29,14 @@ export class BomberScene implements Scene {
   private readonly tileMap: TileMap;
   private targetQueue!: TargetQueue;
   private player!: Player;
+
+  // Screen-shake state: driven by newly-resolved Explosions each tick.
+  // Lives here (not in the engine) since "shake on explosion" is this
+  // pack's decision — Camera itself just exposes the generic shakeX/shakeY
+  // offset mechanism, reusable by any future animation pack.
+  private shakeTicksRemaining = 0;
+  private shakeMagnitude = 0;
+  private notifiedExplosions = new WeakSet<Explosion>();
 
   constructor(contributionGrid: ContributionGrid) {
     this.tileMap = TileMap.fromContributionGrid(contributionGrid);
@@ -43,9 +54,12 @@ export class BomberScene implements Scene {
 
   update(dt: number, world: World): void {
     world.update(dt);
+    this.detectNewExplosions(world);
+    if (this.shakeTicksRemaining > 0) this.shakeTicksRemaining--;
   }
 
   render(ctx: RenderContext, camera: Camera, world: World): void {
+    this.applyShake(camera, world);
     this.drawPageBackground(ctx, camera);
     this.drawBackground(ctx, camera);
     this.drawMonthLabels(ctx, camera);
@@ -94,6 +108,31 @@ export class BomberScene implements Scene {
       }
     }
     return { x: 0, y: 0 };
+  }
+
+  /** Scans for Explosions that just resolved (dealt their damage) this tick and kicks off a shake, scaled to blast radius. */
+  private detectNewExplosions(world: World): void {
+    for (const entity of world.entities) {
+      if (!(entity instanceof Explosion)) continue;
+      if (entity.resolved && !this.notifiedExplosions.has(entity)) {
+        this.notifiedExplosions.add(entity);
+        this.shakeTicksRemaining = SHAKE_DURATION_TICKS;
+        this.shakeMagnitude = 2 + entity.radius * 1.5;
+      }
+    }
+  }
+
+  /** Computes this frame's shake jitter (decaying over the shake's remaining duration) and applies it to the camera. */
+  private applyShake(camera: Camera, world: World): void {
+    if (this.shakeTicksRemaining <= 0) {
+      camera.shakeX = 0;
+      camera.shakeY = 0;
+      return;
+    }
+    const decay = this.shakeTicksRemaining / SHAKE_DURATION_TICKS;
+    const magnitude = this.shakeMagnitude * decay;
+    camera.shakeX = (world.rng.next() - 0.5) * 2 * magnitude;
+    camera.shakeY = (world.rng.next() - 0.5) * 2 * magnitude;
   }
 
   /** Fills the whole canvas (including the label margin area) with GitHub's page background. */

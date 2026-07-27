@@ -11,7 +11,7 @@ import type { ContributionGrid } from "./github/graph.js";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
-const TILE_SIZE_PX = 16; // bumped from 12 for sprite clarity; kept modest since this directly scales output file size
+const TILE_SIZE_PX = 16; // compromise: enough resolution for sprite legibility without the file-size blowup of full 1:1 (20px) - see explosion.ts for the other half of this fix
 const LEFT_MARGIN_PX = 24; // room for day-of-week labels (Mon/Wed/Fri)
 const TOP_MARGIN_PX = 14; // room for month labels (Jan, Feb, ...)
 

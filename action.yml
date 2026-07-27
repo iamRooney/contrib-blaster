@@ -11,7 +11,7 @@ inputs:
     required: false
     default: "bomber"
   output:
-    description: "Output format: gif, webp, or mp4"
+    description: "Output format: gif, webp, or mp4. Use gif or webp for README embedding (GitHub renders these inline from a committed file) - mp4 CANNOT be auto-embedded in a README (GitHub strips video tags/links for committed repo files; only manually drag-dropped videos get a special embeddable URL), so it's only useful if you plan to host/share the file elsewhere."
     required: false
     default: "gif"
   output-path:
