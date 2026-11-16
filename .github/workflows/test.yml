@@ -1,8 +1,28 @@
-name: Test contrib-blaster on my own graph
-on: workflow_dispatch
+name: Test contrib-blaster
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
   test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  test-action:
+    name: Test action on contributor graph
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -10,7 +30,27 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           output: gif
-      - uses: actions/upload-artifact@v4
+          animation: bomber
+      - name: Upload animation artifact
+        uses: actions/upload-artifact@v4
         with:
           name: contrib-animation
           path: output/
+          retention-days: 7
+
+  test-action-webp:
+    name: Test action with WebP output
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          output: webp
+          animation: bomber
+      - name: Upload WebP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: contrib-animation-webp
+          path: output/
+          retention-days: 7

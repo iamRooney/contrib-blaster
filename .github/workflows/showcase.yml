@@ -1,0 +1,60 @@
+name: Generate Showcase Animation
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run weekly on Mondays to keep showcase fresh
+    - cron: "0 0 * * 1"
+
+permissions:
+  contents: write
+
+jobs:
+  showcase:
+    name: Generate and showcase animation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need history for demo
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run build:action
+
+      # Generate demo animation from a known public user
+      - name: Generate showcase animation
+        uses: ./
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          login: iamRooney
+          animation: bomber
+          output: gif
+          output-path: ./showcase/iamRooney.gif
+          fps: 24
+
+      # Generate WebP version (smaller)
+      - name: Generate WebP showcase
+        uses: ./
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          login: iamRooney
+          animation: bomber
+          output: webp
+          output-path: ./showcase/iamRooney.webp
+          fps: 24
+
+      # Commit the showcase artifacts
+      - name: Commit showcase
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add showcase/
+          git diff --staged --quiet || git commit -m "chore: update showcase animation"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
