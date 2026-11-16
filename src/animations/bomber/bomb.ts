@@ -4,6 +4,7 @@ import type { Camera } from "../../engine/camera.js";
 import type { RenderContext } from "../../engine/types.js";
 import type { Vec2 } from "../../engine/types.js";
 import { Explosion } from "./explosion.js";
+import { drawSprite, BOMB_SPRITE } from "./sprites.js";
 
 const DEFAULT_FUSE_TICKS = 10; // ~0.17s at 60 ticks/sec — tuned for full-year grids with 100s of targets
 
@@ -30,9 +31,6 @@ export class Bomb extends Entity {
   }
 
   render(ctx: RenderContext, camera: Camera): void {
-    // Placeholder — real version pulses/animates via spritesheet as the fuse counts down.
-    const screen = camera.worldToScreen(this.position);
-    ctx.fillStyle = "#2b2b2b";
-    ctx.fillRect(screen.x, screen.y, camera.zoom, camera.zoom);
+    drawSprite(ctx, camera, this.position, BOMB_SPRITE);
   }
 }

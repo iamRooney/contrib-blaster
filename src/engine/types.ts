@@ -17,6 +17,16 @@ export interface RenderContext {
   [key: string]: unknown;
 }
 
+/**
+ * A sprite is a row-major grid of single characters, each mapped to a color
+ * (or `null`/omitted for transparent) via its palette. This type is shared
+ * across the engine so animation packs can define their sprites consistently.
+ */
+export interface Sprite {
+  rows: string[];
+  palette: Record<string, string>;
+}
+
 export interface Vec2 {
   x: number;
   y: number;

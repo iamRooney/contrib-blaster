@@ -273,132 +273,7 @@ function isTileOccupant(e) {
   return typeof e.tileX === "number" && typeof e.tileY === "number";
 }
 
-// src/animations/bomber/explosion.ts
-var VISUAL_DURATION_TICKS = 6;
-var Explosion = class extends Entity {
-  radius;
-  ticksRemaining = VISUAL_DURATION_TICKS;
-  hasAppliedDamage = false;
-  /** Set to true once damage has been applied — Player state machine polls this. */
-  resolved = false;
-  constructor(center, radius) {
-    super(
-      center,
-      /* zIndex */
-      5
-    );
-    this.radius = radius;
-  }
-  update(_dt, world) {
-    if (!this.hasAppliedDamage) {
-      this.applyDamage(world);
-      this.hasAppliedDamage = true;
-      this.resolved = true;
-    }
-    if (--this.ticksRemaining <= 0) this.destroy();
-  }
-  applyDamage(world) {
-    const tileMap = world.tileMap;
-    const affectedTiles = tileMap.tilesInRadius(this.position, this.radius);
-    const affectedCoords = new Set(affectedTiles.map((t) => `${t.gridX},${t.gridY}`));
-    for (const entity of world.entities) {
-      if (!isTileOccupant(entity) || !isDestructible(entity)) continue;
-      if (affectedCoords.has(`${entity.tileX},${entity.tileY}`)) {
-        entity.onExplosionHit(1);
-      }
-    }
-  }
-  render(ctx, camera) {
-    const screen = camera.worldToScreen(this.position);
-    const progress = this.ticksRemaining / VISUAL_DURATION_TICKS;
-    const cx = screen.x + camera.zoom / 2;
-    const cy = screen.y + camera.zoom / 2;
-    const maxPixelRadius = camera.zoom * (this.radius + 0.6);
-    const outerR = maxPixelRadius * (0.4 + 0.6 * progress);
-    const box = Math.ceil(outerR) + 2;
-    const step = 2;
-    for (let dy = -box; dy <= box; dy += step) {
-      for (let dx = -box; dx <= box; dx += step) {
-        const d = Math.hypot(dx, dy);
-        const theta = Math.atan2(dy, dx);
-        const outerEdge = burstRadiusAt(theta, outerR * 0.75, 7, outerR * 0.2, 0);
-        const midEdge = burstRadiusAt(theta, outerR * 0.5, 7, outerR * 0.15, 0.5);
-        const innerEdge = burstRadiusAt(theta, outerR * 0.25, 5, outerR * 0.1, 1.2);
-        let color = null;
-        if (d <= innerEdge) color = "#fff8dc";
-        else if (d <= midEdge) color = "#ff8f00";
-        else if (d <= outerEdge) color = "#ffd54f";
-        if (color) {
-          ctx.fillStyle = color;
-          ctx.fillRect(cx + dx, cy + dy, step, step);
-        }
-      }
-    }
-  }
-};
-function burstRadiusAt(theta, baseR, spikes, spikeAmount, phaseOffset) {
-  return baseR + Math.sin(theta * spikes + phaseOffset) * spikeAmount + Math.sin(theta * spikes * 2.3) * spikeAmount * 0.4;
-}
-
-// src/animations/bomber/bomb.ts
-var DEFAULT_FUSE_TICKS = 10;
-var Bomb = class extends Entity {
-  fuseTicks;
-  radius;
-  /** The Explosion this bomb spawns, once it detonates — Player polls this to know when it's safe to advance. */
-  spawnedExplosion;
-  constructor(position, radius, fuseTicks = DEFAULT_FUSE_TICKS) {
-    super(
-      position,
-      /* zIndex */
-      4
-    );
-    this.radius = radius;
-    this.fuseTicks = fuseTicks;
-  }
-  update(_dt, world) {
-    this.fuseTicks -= 1;
-    if (this.fuseTicks <= 0) {
-      const explosion = new Explosion(this.position, this.radius);
-      world.add(explosion);
-      this.spawnedExplosion = explosion;
-      this.destroy();
-    }
-  }
-  render(ctx, camera) {
-    const screen = camera.worldToScreen(this.position);
-    ctx.fillStyle = "#2b2b2b";
-    ctx.fillRect(screen.x, screen.y, camera.zoom, camera.zoom);
-  }
-};
-
-// src/animations/bomber/sprites.ts
-function drawSprite(ctx, camera, worldPos, sprite) {
-  const screen = camera.worldToScreen(worldPos);
-  const tileSizePx = camera.zoom;
-  const cols = sprite.rows[0]?.length ?? 0;
-  const rows = sprite.rows.length;
-  if (cols === 0 || rows === 0) return;
-  const cellSize = tileSizePx / Math.max(cols, rows);
-  const offsetX = (tileSizePx - cols * cellSize) / 2;
-  const offsetY = (tileSizePx - rows * cellSize) / 2;
-  for (let r = 0; r < rows; r++) {
-    const row = sprite.rows[r] ?? "";
-    for (let c = 0; c < cols; c++) {
-      const ch = row[c];
-      if (!ch || ch === "." || ch === " ") continue;
-      const color = sprite.palette[ch];
-      if (!color) continue;
-      ctx.fillStyle = color;
-      ctx.fillRect(
-        screen.x + offsetX + c * cellSize,
-        screen.y + offsetY + r * cellSize,
-        Math.ceil(cellSize),
-        Math.ceil(cellSize)
-      );
-    }
-  }
-}
+// src/animations/bomber/player-sprite.ts
 var PLAYER_SPRITE = {
   palette: {
     B: "#3fb68a",
@@ -435,6 +310,418 @@ var PLAYER_SPRITE = {
     "......TT...TT.......",
     "...................."
   ]
+};
+
+// src/animations/bomber/weak-crate-sprite.ts
+var WEAK_CRATE_SPRITE = {
+  palette: {
+    W: "#9be9a8",
+    D: "#7ad188",
+    L: "#5cc470",
+    K: "#3a8f4a",
+    C: "#bfffc8"
+  },
+  rows: [
+    "....................",
+    "....................",
+    "..KKKKKKKKKKKKKKKK..",
+    "..KCLLLLLLLLLLLLCK..",
+    "..KLDDDDDDDDDDDDDK..",
+    "..KLWDWWWDWWWDWWWK..",
+    "..KLWDWWWDWWWDWWWK..",
+    "..KLDDDDDDDDDDDDDK..",
+    "..KLWDWWWDWWWDWWWK..",
+    "..KLWDWWWDWWWDWWWK..",
+    "..KLDDDDDDDDDDDDDK..",
+    "..KLWDWWWDWWWDWWWK..",
+    "..KLWDWWWDWWWDWWWK..",
+    "..KLDDDDDDDDDDDDDK..",
+    "..KLWDWWWDWWWDWWWK..",
+    "..KLWDWWWDWWWDWWWK..",
+    "..KCDDDDDDDDDDDDCK..",
+    "..KKKKKKKKKKKKKKKK..",
+    "....................",
+    "...................."
+  ]
+};
+
+// src/animations/bomber/strong-crate-sprite.ts
+var STRONG_CRATE_SPRITE = {
+  palette: {
+    W: "#40c463",
+    D: "#32a050",
+    L: "#6ee08a",
+    K: "#25733d",
+    C: "#90f0a8"
+  },
+  rows: [
+    "....................",
+    "....................",
+    "..KKKLKKKKKLKKKKKK..",
+    "..KWWLDWWWWLDWWWWK..",
+    "..KWWLDWWWWLDWWWWK..",
+    "..LLLLLLLLLLLLLLLL..",
+    "..KDDLDDDDDLDDDDDK..",
+    "..KWWLDLLLLLDLLWWK..",
+    "..KWWLDLLLLLDLLWWK..",
+    "..KWWLDLLLLLDLLWWK..",
+    "..KWWLDLLLLLDLLWWK..",
+    "..LLLLLLLLLLLLLLLL..",
+    "..KDDLDDDDDLDDDDDK..",
+    "..KWWLDLLLLLDLLWWK..",
+    "..KWWLDLLLLLDLLWWK..",
+    "..KWWLDLLLLLDLLWWK..",
+    "..KWWLDLLLLLDLLWWK..",
+    "..KKKLKKKKKLKKKKKK..",
+    "....................",
+    "...................."
+  ]
+};
+
+// src/animations/bomber/reinforced-crate-sprite.ts
+var REINFORCED_CRATE_SPRITE = {
+  palette: {
+    W: "#30a14e",
+    D: "#26803e",
+    L: "#54c86e",
+    K: "#1a5c2a",
+    C: "#78e090"
+  },
+  rows: [
+    "....................",
+    ".KKDKDKDKDKDKDKDKKK.",
+    ".KLLLLDLLLLLLDLLLLK.",
+    ".KLLLLDLLLLLLDLLLLK.",
+    ".KLLLLDLLLLLLDLLLLK.",
+    ".KLLLLDLLLLLLDLLLLK.",
+    ".KDDDDRDDDDDDRDDDDK.",
+    ".KLLLLDLLLLLLDLLLLK.",
+    ".KLLLLDLLLLLLDLLLLK.",
+    ".KLLLLDLLLLLLDLLLLK.",
+    ".KLLLLDLLLLLLDLLLLK.",
+    ".KLLLLDLLLLLLDLLLLK.",
+    ".KLLLLDLLLLLLDLLLLK.",
+    ".KDDDDRDDDDDDRDDDDK.",
+    ".KLLLLDLLLLLLDLLLLK.",
+    ".KLLLLDLLLLLLDLLLLK.",
+    ".KLLLLDLLLLLLDLLLLK.",
+    ".KLLLLDLLLLLLDLLLLK.",
+    ".KKKKKKKKKKKKKKKKKK.",
+    "...................."
+  ]
+};
+
+// src/animations/bomber/bomb-sprite.ts
+var BOMB_SPRITE = {
+  palette: {
+    W: "#fff8dc",
+    Y: "#ffd54f",
+    O: "#ff8f00",
+    R: "#e65100",
+    D: "#bf360c",
+    S: "#ffcc80"
+  },
+  rows: [
+    ".........W..........",
+    ".........O..........",
+    ".........Y..........",
+    "........YOY.........",
+    "........YYY.........",
+    ".........O..........",
+    ".........O..........",
+    "......KKKFKKK.......",
+    ".....KKFOFFFKK......",
+    ".....KFOOOFFFK......",
+    ".....KOOOOOFFK......",
+    ".....FFOOOFFFF......",
+    ".....KFFOFFFFK......",
+    ".....KFFFFFFFK......",
+    ".....KKFFFFFKK......",
+    "......KKKFKKK.......",
+    "....................",
+    "....................",
+    "....................",
+    "...................."
+  ]
+};
+
+// src/animations/bomber/explosion-frame-0-sprite.ts
+var EXPLOSION_FRAME_0_SPRITE = {
+  palette: {
+    W: "#fff8dc",
+    Y: "#ffd54f",
+    O: "#ff8f00",
+    R: "#e65100",
+    D: "#bf360c",
+    S: "#ffcc80"
+  },
+  rows: [
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    ".........S..........",
+    "........SO..........",
+    "......RO.YSORS......",
+    ".......OYWYO........",
+    "......ROYWYOR.......",
+    "......ROOYOORS......",
+    "........OROS........",
+    ".......SR.RS........",
+    "........S.S.........",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "...................."
+  ]
+};
+
+// src/animations/bomber/explosion-frame-1-sprite.ts
+var EXPLOSION_FRAME_1_SPRITE = {
+  palette: {
+    W: "#fff8dc",
+    Y: "#ffd54f",
+    O: "#ff8f00",
+    R: "#e65100",
+    D: "#bf360c",
+    S: "#ffcc80"
+  },
+  rows: [
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "........RRS.........",
+    "........RO..........",
+    ".....S..OOS.RRS.....",
+    "....ROOROYROOR......",
+    ".....OOYOYOYO.......",
+    "......OYWWWYRS......",
+    ".....ROYWWWYYOR.....",
+    "....ROYYYWYYOOOR....",
+    "..SRRRROYYYO..S.....",
+    "...SS..OYROOR.......",
+    "......SOO.ROR.......",
+    ".......RR.SRR.......",
+    ".......R...S........",
+    "......S.............",
+    "....................",
+    "...................."
+  ]
+};
+
+// src/animations/bomber/explosion-frame-2-sprite.ts
+var EXPLOSION_FRAME_2_SPRITE = {
+  palette: {
+    W: "#fff8dc",
+    Y: "#ffd54f",
+    O: "#ff8f00",
+    R: "#e65100",
+    D: "#bf360c",
+    S: "#ffcc80"
+  },
+  rows: [
+    "....................",
+    ".........S..........",
+    ".......RRR..........",
+    ".......RORS....S....",
+    ".......ROOSS.RRR....",
+    "..RRS.SOOOR.ROOR....",
+    "..RRORROYYROOOO.....",
+    "..ROOOOOYYOYYOR.....",
+    "...ROYYYYWYYYRS.....",
+    "...SROYWWWWYOORRS...",
+    "...SROOYWWWWYYOOORSS",
+    "...ROYYWWWWYYYOOORR.",
+    "SRROOYYOWYWYORRRR...",
+    "SRROOOROYYYYOR......",
+    ".SS.SSROYOOYOO......",
+    ".....SROOR.OOOR.....",
+    "......ROO..RROR.....",
+    ".....SRRR...SRR.....",
+    "......RR............",
+    "...................."
+  ]
+};
+
+// src/animations/bomber/explosion-frame-3-sprite.ts
+var EXPLOSION_FRAME_3_SPRITE = {
+  palette: {
+    W: "#fff8dc",
+    Y: "#ffd54f",
+    O: "#ff8f00",
+    R: "#e65100",
+    D: "#bf360c",
+    S: "#ffcc80"
+  },
+  rows: [
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "........R...........",
+    ".......ROR.S.R......",
+    "...S...ROO.ROR......",
+    "....RR.RYOROO.......",
+    "....ROOOYYYYR.......",
+    ".....RYYYWWOORR.S...",
+    "....S.ROWWWYYOORS...",
+    ".....OYYYWWOORR.....",
+    "....ROOOYYYYR.......",
+    "..S.RR.RYOROO.......",
+    "...S...RORSROR......",
+    ".......RO..SRR......",
+    "........RS....S.....",
+    "....................",
+    "....................",
+    "...................."
+  ]
+};
+
+// src/animations/bomber/explosion-frame-4-sprite.ts
+var EXPLOSION_FRAME_4_SPRITE = {
+  palette: {
+    W: "#fff8dc",
+    Y: "#ffd54f",
+    O: "#ff8f00",
+    R: "#e65100",
+    D: "#bf360c",
+    S: "#ffcc80"
+  },
+  rows: [
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "...........SS.......",
+    ".......SRSSR........",
+    "......S.OOORS.......",
+    ".....SROOYY.........",
+    ".......RYWWYO.......",
+    "......ROYWY.........",
+    "......R.ROROS.......",
+    ".......SRR.S........",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "...................."
+  ]
+};
+
+// src/animations/bomber/sprites.ts
+function drawSprite(ctx, camera, worldPos, sprite) {
+  const screen = camera.worldToScreen(worldPos);
+  const tileSizePx = camera.zoom;
+  const cols = sprite.rows[0]?.length ?? 0;
+  const rows = sprite.rows.length;
+  if (cols === 0 || rows === 0) return;
+  const cellSize = tileSizePx / Math.max(cols, rows);
+  const offsetX = (tileSizePx - cols * cellSize) / 2;
+  const offsetY = (tileSizePx - rows * cellSize) / 2;
+  for (let r = 0; r < rows; r++) {
+    const row = sprite.rows[r] ?? "";
+    for (let c = 0; c < cols; c++) {
+      const ch = row[c];
+      if (!ch || ch === "." || ch === " ") continue;
+      const color = sprite.palette[ch];
+      if (!color) continue;
+      ctx.fillStyle = color;
+      ctx.fillRect(
+        screen.x + offsetX + c * cellSize,
+        screen.y + offsetY + r * cellSize,
+        Math.ceil(cellSize),
+        Math.ceil(cellSize)
+      );
+    }
+  }
+}
+
+// src/animations/bomber/explosion.ts
+var VISUAL_DURATION_TICKS = 6;
+var EXPLOSION_FRAMES = [
+  EXPLOSION_FRAME_0_SPRITE,
+  EXPLOSION_FRAME_1_SPRITE,
+  EXPLOSION_FRAME_2_SPRITE,
+  EXPLOSION_FRAME_3_SPRITE,
+  EXPLOSION_FRAME_4_SPRITE
+];
+var Explosion = class extends Entity {
+  radius;
+  ticksRemaining = VISUAL_DURATION_TICKS;
+  hasAppliedDamage = false;
+  /** Set to true once damage has been applied — Player state machine polls this. */
+  resolved = false;
+  constructor(center, radius) {
+    super(
+      center,
+      /* zIndex */
+      5
+    );
+    this.radius = radius;
+  }
+  update(_dt, world) {
+    if (!this.hasAppliedDamage) {
+      this.applyDamage(world);
+      this.hasAppliedDamage = true;
+      this.resolved = true;
+    }
+    if (--this.ticksRemaining <= 0) this.destroy();
+  }
+  applyDamage(world) {
+    const tileMap = world.tileMap;
+    const affectedTiles = tileMap.tilesInRadius(this.position, this.radius);
+    const affectedCoords = new Set(affectedTiles.map((t) => `${t.gridX},${t.gridY}`));
+    for (const entity of world.entities) {
+      if (!isTileOccupant(entity) || !isDestructible(entity)) continue;
+      if (affectedCoords.has(`${entity.tileX},${entity.tileY}`)) {
+        entity.onExplosionHit(1);
+      }
+    }
+  }
+  render(ctx, camera) {
+    const frameIndex = Math.min(VISUAL_DURATION_TICKS - this.ticksRemaining, EXPLOSION_FRAMES.length - 1);
+    const sprite = EXPLOSION_FRAMES[frameIndex];
+    if (sprite) {
+      drawSprite(ctx, camera, this.position, sprite);
+    }
+  }
+};
+
+// src/animations/bomber/bomb.ts
+var DEFAULT_FUSE_TICKS = 10;
+var Bomb = class extends Entity {
+  fuseTicks;
+  radius;
+  /** The Explosion this bomb spawns, once it detonates — Player polls this to know when it's safe to advance. */
+  spawnedExplosion;
+  constructor(position, radius, fuseTicks = DEFAULT_FUSE_TICKS) {
+    super(
+      position,
+      /* zIndex */
+      4
+    );
+    this.radius = radius;
+    this.fuseTicks = fuseTicks;
+  }
+  update(_dt, world) {
+    this.fuseTicks -= 1;
+    if (this.fuseTicks <= 0) {
+      const explosion = new Explosion(this.position, this.radius);
+      world.add(explosion);
+      this.spawnedExplosion = explosion;
+      this.destroy();
+    }
+  }
+  render(ctx, camera) {
+    drawSprite(ctx, camera, this.position, BOMB_SPRITE);
+  }
 };
 
 // src/animations/bomber/player.ts
@@ -597,52 +884,16 @@ var Player = class extends Entity {
   }
 };
 
-// src/animations/bomber/palette.ts
-var GITHUB_COLORS = {
-  /** Zero-contribution square background. */
-  level0: "#ebedf0",
-  level1: "#9be9a8",
-  level2: "#40c463",
-  level3: "#30a14e",
-  level4: "#216e39",
-  /** Page background behind the grid itself. */
-  pageBackground: "#000000",
-  /** Axis label text color - light, for contrast against the black page background. */
-  labelText: "#c9d1d9"
-};
-function colorForTileType(type) {
-  switch (type) {
-    case "floor" /* Floor */:
-      return GITHUB_COLORS.level0;
-    case "weak_crate" /* WeakCrate */:
-      return GITHUB_COLORS.level1;
-    case "strong_crate" /* StrongCrate */:
-      return GITHUB_COLORS.level2;
-    case "reinforced_crate" /* ReinforcedCrate */:
-      return GITHUB_COLORS.level3;
-    case "metal_block" /* MetalBlock */:
-      return GITHUB_COLORS.level4;
-  }
-}
-function fillContributionSquare(ctx, screenX, screenY, tileSizePx, color) {
-  const gap = Math.max(1, Math.round(tileSizePx * 0.12));
-  const size = tileSizePx - gap;
-  const corner = Math.max(1, Math.round(size * 0.22));
-  ctx.fillStyle = color;
-  ctx.fillRect(screenX + corner, screenY, size - corner * 2, size);
-  ctx.fillRect(screenX, screenY + corner, size, size - corner * 2);
-  for (let i = 0; i < corner; i++) {
-    const inset = corner - i;
-    ctx.fillRect(screenX + inset, screenY + i, size - inset * 2, 1);
-    ctx.fillRect(screenX + inset, screenY + size - 1 - i, size - inset * 2, 1);
-  }
-}
-
 // src/animations/bomber/crate.ts
 var HP_BY_TILE_TYPE = {
   ["weak_crate" /* WeakCrate */]: 1,
   ["strong_crate" /* StrongCrate */]: 2,
   ["reinforced_crate" /* ReinforcedCrate */]: 3
+};
+var SPRITE_BY_TILE_TYPE = {
+  ["weak_crate" /* WeakCrate */]: WEAK_CRATE_SPRITE,
+  ["strong_crate" /* StrongCrate */]: STRONG_CRATE_SPRITE,
+  ["reinforced_crate" /* ReinforcedCrate */]: REINFORCED_CRATE_SPRITE
 };
 var Crate = class extends Entity {
   tileX;
@@ -666,8 +917,9 @@ var Crate = class extends Entity {
   update(_dt, _world) {
   }
   render(ctx, camera) {
-    const screen = camera.worldToScreen(this.position);
-    fillContributionSquare(ctx, screen.x, screen.y, camera.zoom, colorForTileType(this.tile.type));
+    const sprite = SPRITE_BY_TILE_TYPE[this.tile.type];
+    if (!sprite) return;
+    drawSprite(ctx, camera, this.position, sprite);
   }
 };
 
@@ -701,6 +953,33 @@ var TargetQueue = class {
     return this.queue.length;
   }
 };
+
+// src/animations/bomber/palette.ts
+var GITHUB_COLORS = {
+  /** Zero-contribution square background. */
+  level0: "#ebedf0",
+  level1: "#9be9a8",
+  level2: "#40c463",
+  level3: "#30a14e",
+  level4: "#216e39",
+  /** Page background behind the grid itself. */
+  pageBackground: "#000000",
+  /** Axis label text color - light, for contrast against the black page background. */
+  labelText: "#c9d1d9"
+};
+function fillContributionSquare(ctx, screenX, screenY, tileSizePx, color) {
+  const gap = Math.max(1, Math.round(tileSizePx * 0.12));
+  const size = tileSizePx - gap;
+  const corner = Math.max(1, Math.round(size * 0.22));
+  ctx.fillStyle = color;
+  ctx.fillRect(screenX + corner, screenY, size - corner * 2, size);
+  ctx.fillRect(screenX, screenY + corner, size, size - corner * 2);
+  for (let i = 0; i < corner; i++) {
+    const inset = corner - i;
+    ctx.fillRect(screenX + inset, screenY + i, size - inset * 2, 1);
+    ctx.fillRect(screenX + inset, screenY + size - 1 - i, size - inset * 2, 1);
+  }
+}
 
 // src/render/font.ts
 var GLYPHS = {

@@ -6,9 +6,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
 <!--
-  NOTE: this is the current real output — flat-rectangle entities, matching
-  the "Current status" section below. Swap this file once real pixel-art
-  sprites land.
+  NOTE: this is the current real output — real pixel-art entities, matching
+  the new animation pack. Swap this file once you're ready to commit it.
 -->
 ![Demo](./docs/demo.gif)
 
@@ -26,7 +25,7 @@ A GitHub Action that reads your real contribution graph and plays it back as a p
 
 That's the whole setup — see [Usage](#usage) below for the full workflow file.
 
-> **Early days:** the simulation engine is real and tested, but sprites are still flat rectangles, not art, and `bomber` is the only animation pack so far. If pixel art or a second pack (Snake? Space Invaders?) sounds fun to build, see [Contributing](#contributing).
+> **Currently available:** the simulation engine is real and tested, and **sprites are now real pixel art**! The `bomber` animation pack is significantly enhanced with detailed graphics for the player, crates, bombs, explosions, and structural pillars. This is a major upgrade from the previous flat-rectangle rendering. If you want a second pack (Snake? Space Invaders?) or have suggestions for new artwork, see [Contributing](#contributing).
 
 ## Usage
 
@@ -87,13 +86,34 @@ Use `gif` or `webp` for README embedding, not `mp4` — GitHub only makes video 
 - Full simulation engine (tile map generation, pathfinding, target-priority bombing, loop/reset)
 - Real GitHub GraphQL contribution fetch
 - GIF, WebP, and MP4 output — all three verified against a full realistic 53-week contribution grid
+- **Real pixel art sprites** for all entities: Player, Crates (Weak/Strong/Reinforced/Metal), Bombs, Explosions, and Powerups
 
 **Not yet done:**
-- Real pixel art — every entity currently renders as a flat colored rectangle, not sprite art
-- Only the `bomber` animation pack exists; the engine supports others (see [Architecture](#architecture)) but none are written yet
+- **Only the `bomber` animation pack exists**; the engine supports others (Snake, Space Invaders, etc.) but none are written yet. Help us expand the library!
 
 </details>
 
 ## Architecture
 
 The animation engine is generic — `bomber` is a plugin, not baked into the core. Adding a new pack (Snake, Space Shooter, etc.) means implementing the `Scene` interface in `src/animations/<name>/`; nothing in `src/engine/` needs to change.
+
+The new pixel-art sprites are generated programmatically from scripts/design/gen-all-sprites.mjs, ensuring perfect symmetry and consistency across all entity types.
+
+## Screenshots
+
+See the [contrib-blaster repository](https://github.com/iamRooney/contrib-blaster) for generated demo animations and output samples.
+
+## Contributing
+
+Contributions are welcome! To add a new animation pack:
+
+1. Create a new directory in `src/animations/<name>/`
+2. Implement the `Scene` interface
+3. Register your animation pack in `src/animations/<name>/index.ts`
+4. Add your pack's sprites (see `scripts/design/gen-all-sprites.mjs` as a template)
+
+For sprite art suggestions, contact the maintainer or open an issue.
+
+## License
+
+MIT

@@ -50,54 +50,16 @@ export function drawSprite(ctx: RenderContext, camera: Camera, worldPos: Vec2, s
   }
 }
 
-/**
- * "The Blaster" — this project's original bomber-pack protagonist. A small,
- * round, teal-green blob character with simple dot eyes, holding a bomb
- * overhead with both arms. Generated procedurally (circles/rects via math,
- * not freehand ASCII) to guarantee symmetry — see
- * scripts/design/gen-player-sprite.mjs for the generator, used to render
- * and visually verify this exact design before shipping it.
- *
- * Deliberately original: round silhouette, simple dot eyes (not large
- * oval "cute" eyes), teal-green color (not pink), dark stubby feet (not
- * red shoes) — distinct from any specific existing character design,
- * while keeping the general "small creature holding a bomb overhead"
- * concept, which isn't itself protectable.
- */
-export const PLAYER_SPRITE: Sprite = {
-  palette: {
-    B: "#3fb68a",
-    S: "#2e8f6c",
-    K: "#1b3a2f",
-    E: "#16211d",
-    C: "#7fd9b5",
-    T: "#276b52",
-    M: "#2f3b40",
-    H: "#57666c",
-    F: "#7a5c3e",
-    O: "#ff8f00",
-    Y: "#ffd54f",
-  },
-  rows: [
-    "........OYO.........",
-    ".......KKFKK........",
-    "......KMHMMMK.......",
-    "......KMHMMMK.......",
-    "......MMMMMMM.......",
-    "......KMMMMMK.......",
-    "......KMMMMMK.......",
-    "......BKKMKKB.......",
-    ".....KBBBBBBBK......",
-    "....KBBBBBBBBBK.....",
-    "....KBBKBBBKSSK.....",
-    "....KBBEBBBESSK.....",
-    "....BBCBBBBBCSB.....",
-    "....KBBBBBBBSSK.....",
-    "....KBBBBBBBSSK.....",
-    "....KBBBBBSSSSK.....",
-    ".....KBBBBSSSK......",
-    "......TTKBKTT.......",
-    "......TT...TT.......",
-    "....................",
-  ],
-};
+// Re-export all generated sprites from the master index
+export * from "./player-sprite.js";
+export * from "./weak-crate-sprite.js";
+export * from "./strong-crate-sprite.js";
+export * from "./reinforced-crate-sprite.js";
+export * from "./metal-block-sprite.js";
+export * from "./bomb-sprite.js";
+export * from "./powerup-sprite.js";
+export * from "./explosion-frame-0-sprite.js";
+export * from "./explosion-frame-1-sprite.js";
+export * from "./explosion-frame-2-sprite.js";
+export * from "./explosion-frame-3-sprite.js";
+export * from "./explosion-frame-4-sprite.js";
